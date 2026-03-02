@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
 import Search from "@/components/Search";
 import Tabs from "@/components/Tabs";
@@ -12,8 +12,6 @@ import List from "./List";
 import { Customer } from "@/types/customer";
 import { useSelection } from "@/hooks/useSelection";
 
-import { customers } from "@/mocks/customers";
-
 const views = [
     { id: 1, name: "Active" },
     { id: 2, name: "New" },
@@ -22,6 +20,36 @@ const views = [
 const CustomerListPage = () => {
     const [search, setSearch] = useState("");
     const [view, setView] = useState(views[0]);
+    const [customers, setCustomers] = useState<Customer[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        const fetchCustomers = async () => {
+            setIsLoading(true);
+            try {
+                const params = new URLSearchParams();
+                if (search) params.append("query", search);
+
+                const response = await fetch(`/api/customers?${params.toString()}`);
+                if (!response.ok) throw new Error("Failed to fetch customers");
+                const data = await response.json();
+                setCustomers(data);
+            } catch (err) {
+                console.error("Error fetching customers:", err);
+                setError("Could not load customers.");
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        const timer = setTimeout(() => {
+            fetchCustomers();
+        }, 300);
+
+        return () => clearTimeout(timer);
+    }, [search]);
+
     const {
         selectedRows,
         selectAll,
@@ -32,7 +60,7 @@ const CustomerListPage = () => {
 
     return (
         <Layout title="Customer list">
-            <div className="card">
+            <div className={`card transition-opacity ${isLoading ? "opacity-50" : "opacity-100"}`}>
                 {selectedRows.length === 0 ? (
                     <div className="flex items-center min-h-12">
                         <div className="pl-5 text-h6 max-lg:pl-3 max-md:mr-auto">
@@ -42,7 +70,7 @@ const CustomerListPage = () => {
                             className="w-70 ml-6 mr-auto max-md:hidden"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            placeholder="Search by name of email"
+                            placeholder="Search by name or email"
                             isGray
                         />
                         {search === "" && (
@@ -77,12 +105,15 @@ const CustomerListPage = () => {
                         </Button>
                         <DeleteItems
                             counter={selectedRows.length}
-                            onDelete={() => {}}
+                            onDelete={() => { }}
                             isLargeButton
                         />
                     </div>
                 )}
-                {search !== "" ? (
+                {error && (
+                    <div className="p-5 text-red-500">{error}</div>
+                )}
+                {!isLoading && customers.length === 0 ? (
                     <NoFound title="No customers found" />
                 ) : (
                     <div className="p-1 pt-3 max-lg:px-0">
