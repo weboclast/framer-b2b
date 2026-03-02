@@ -31,6 +31,11 @@ export const navigation = [
         ],
     },
     {
+        title: "Customers",
+        icon: "profile",
+        href: "/customers",
+    },
+    {
         title: "Shipping",
         icon: "wallet",
         href: "/shipping",

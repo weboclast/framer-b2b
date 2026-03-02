@@ -144,7 +144,7 @@ const RFQsPage = () => {
 
         {rfqs.length === 0 && !isLoading && (
           <div className="flex flex-col items-center justify-center py-16 text-center">
-            <Icon name="inbox" className="fill-t-tertiary w-16 h-16 mb-4" />
+            <Icon name="envelope" className="fill-t-tertiary w-16 h-16 mb-4" />
             <h3 className="text-h6 mb-2">No RFQs found</h3>
             <p className="text-body-2 text-t-tertiary">
               {searchQuery || statusFilter.slug !== "all"

@@ -58,6 +58,7 @@ export default function RootLayout({
         <html lang="en" suppressHydrationWarning>
             <body
                 className={`${interDisplay.variable} bg-b-surface1 font-inter text-body-1 text-t-primary antialiased`}
+                suppressHydrationWarning
             >
                 <Providers>{children}</Providers>
             </body>

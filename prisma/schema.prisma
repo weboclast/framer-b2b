@@ -11,96 +11,147 @@ model User {
   id        String   @id @default(cuid())
   email     String   @unique
   name      String?
-  password  String?
   role      UserRole @default(OWNER)
   storeId   String?  @unique
-  store     Store?   @relation("StoreOwner")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-}
-
-enum UserRole {
-  OWNER
-  ADMIN
+  password  String?
+  store     Store?   @relation("StoreOwner")
 }
 
 model Store {
-  id              String         @id @default(nanoid(12))
-  name            String
+  id               String         @id @default(nanoid(12))
+  name             String
   businessLocation String?
-  currency        String         @default("USD")
-  taxPercent      Float          @default(0)
-  ownerId         String         @unique
-  owner           User           @relation("StoreOwner", fields: [ownerId], references: [id])
-  rfqs            RFQ[]
-  shippingRules   ShippingRule[]
-  emailSettings   EmailSettings?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  currency         String         @default("USD")
+  taxPercent       Float          @default(0)
+  ownerId          String         @unique
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  emailSettings    EmailSettings?
+  rfqs             RFQ[]
+  shippingRules    ShippingRule[]
+  owner            User           @relation("StoreOwner", fields: [ownerId], references: [id])
 }
 
 model ShippingRule {
   id          String    @id @default(cuid())
   storeId     String
-  store       Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
   countryCode String?
   isDefault   Boolean   @default(false)
   flatRate    Float     @default(0)
   deletedAt   DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+  store       Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
   @@index([storeId])
 }
 
 model EmailSettings {
-  id                   String   @id @default(cuid())
-  storeId              String   @unique
-  store                Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  senderAddress        String?
+  id                  String   @id @default(cuid())
+  storeId             String   @unique
+  senderAddress       String?
   replyTo             String?
-  internalRecipient    String?
-  confirmationSubject  String?
-  confirmationBody     String?
-  notificationSubject  String?
-  notificationBody     String?
-  quoteSubject         String?
-  quoteBody            String?
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  internalRecipient   String?
+  confirmationSubject String?
+  confirmationBody    String?
+  notificationSubject String?
+  notificationBody    String?
+  quoteSubject        String?
+  quoteBody           String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  store               Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
 }
 
 model RFQ {
-  id                      String              @id @default(uuid())
+  id                      String          @id @default(uuid())
   storeId                 String
-  store                  Store               @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  status                 RFQStatus           @default(PENDING)
-  subtotal               Float               @default(0)
-  tax                    Float               @default(0)
-  shipping               Float               @default(0)
-  total                  Float               @default(0)
-  customerName           String
-  customerEmail          String
-  companyName            String?
-  phone                  String?
-  addressCity            String?
-  addressCountry         String?
-  addressPostal          String?
-  addressState           String?
-  addressLines           Json?
-  additionalCustomerData Json?
-  rawPayload             Json?
-  confirmationEmailStatus EmailStatus        @default(PENDING)
-  items                  RFQItem[]
-  statusHistory          StatusHistory[]
-  quoteNotes             QuoteNote[]
-  deletedAt              DateTime?
-  createdAt              DateTime            @default(now())
-  updatedAt              DateTime            @updatedAt
+  status                  RFQStatus       @default(PENDING)
+  subtotal                Float           @default(0)
+  tax                     Float           @default(0)
+  shipping                Float           @default(0)
+  total                   Float           @default(0)
+  customerName            String
+  customerEmail           String
+  companyName             String?
+  phone                   String?
+  addressCity             String?
+  addressCountry          String?
+  addressPostal           String?
+  addressState            String?
+  addressLines            Json?
+  additionalCustomerData  Json?
+  rawPayload              Json?
+  confirmationEmailStatus EmailStatus     @default(PENDING)
+  deletedAt               DateTime?
+  createdAt               DateTime        @default(now())
+  updatedAt               DateTime        @updatedAt
+  quoteNotes              QuoteNote[]
+  store                   Store           @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  items                   RFQItem[]
+  statusHistory           StatusHistory[]
 
   @@index([storeId])
   @@index([status])
   @@index([customerEmail])
+}
+
+model RFQItem {
+  id             String   @id @default(cuid())
+  rfqId          String
+  productId      String?
+  productName    String
+  imageUrl       String?
+  unitPrice      Float
+  quantity       Int
+  lineTotal      Float
+  additionalData Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  rfq            RFQ      @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+
+  @@index([rfqId])
+}
+
+model StatusHistory {
+  id        String    @id @default(cuid())
+  rfqId     String
+  status    RFQStatus
+  note      String?
+  changedBy String?
+  changedAt DateTime  @default(now())
+  rfq       RFQ       @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+
+  @@index([rfqId])
+}
+
+model QuoteNote {
+  id          String      @id @default(cuid())
+  rfqId       String
+  sentAt      DateTime    @default(now())
+  messageBody String
+  sentBy      String?
+  emailStatus EmailStatus @default(PENDING)
+  rfq         RFQ         @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+
+  @@index([rfqId])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  expires   DateTime
+  createdAt DateTime @default(now())
+
+  @@unique([email, token])
+}
+
+enum UserRole {
+  OWNER
+  ADMIN
 }
 
 enum RFQStatus {
@@ -114,55 +165,4 @@ enum EmailStatus {
   PENDING
   SENT
   FAILED
-}
-
-model RFQItem {
-  id             String   @id @default(cuid())
-  rfqId          String
-  rfq            RFQ      @relation(fields: [rfqId], references: [id], onDelete: Cascade)
-  productId      String?
-  productName    String
-  imageUrl       String?
-  unitPrice      Float
-  quantity       Int
-  lineTotal      Float
-  additionalData Json?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  @@index([rfqId])
-}
-
-model StatusHistory {
-  id        String   @id @default(cuid())
-  rfqId     String
-  rfq       RFQ      @relation(fields: [rfqId], references: [id], onDelete: Cascade)
-  status    RFQStatus
-  note      String?
-  changedBy String?
-  changedAt DateTime @default(now())
-
-  @@index([rfqId])
-}
-
-model QuoteNote {
-  id           String      @id @default(cuid())
-  rfqId        String
-  rfq          RFQ         @relation(fields: [rfqId], references: [id], onDelete: Cascade)
-  sentAt       DateTime    @default(now())
-  messageBody  String
-  sentBy       String?
-  emailStatus  EmailStatus @default(PENDING)
-
-  @@index([rfqId])
-}
-
-model PasswordResetToken {
-  id        String   @id @default(cuid())
-  email     String
-  token     String   @unique
-  expires   DateTime
-  createdAt DateTime @default(now())
-
-  @@unique([email, token])
 }
