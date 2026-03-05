@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import Field from "@/components/Field";
 import Button from "@/components/Button";
 
-const ConsumerLoginPage = () => {
+const LoginPageContent = () => {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [formData, setFormData] = useState({ email: "", password: "" });
@@ -38,8 +38,8 @@ const ConsumerLoginPage = () => {
             }
             router.push("/consumer/rfqs");
             router.refresh();
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : "An unknown error occurred");
         } finally {
             setIsLoading(false);
         }
@@ -97,6 +97,14 @@ const ConsumerLoginPage = () => {
                 </p>
             </div>
         </div>
+    );
+};
+
+const ConsumerLoginPage = () => {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <LoginPageContent />
+        </Suspense>
     );
 };
 

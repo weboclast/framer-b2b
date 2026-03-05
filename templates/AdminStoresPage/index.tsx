@@ -112,7 +112,7 @@ const AdminStoresPage = () => {
                                 </td>
                                 <td>
                                     <Button
-                                        isSmall
+                                        className="!h-9 !px-4 !text-xs"
                                         isWhite={store.active}
                                         isStroke={!store.active}
                                         onClick={() => toggleActive(store)}

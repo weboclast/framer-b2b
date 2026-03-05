@@ -19,7 +19,16 @@ type Discount = {
     createdAt: string;
 };
 
-const defaultForm = { code: "", type: "PERCENT" as const, value: "10", minSubtotal: "0", active: true };
+type FormData = {
+    code: string;
+    type: "PERCENT" | "FIXED";
+    value: string;
+    minSubtotal: string;
+    active: boolean;
+};
+
+const defaultForm: FormData = { code: "", type: "PERCENT", value: "10", minSubtotal: "0", active: true };
+
 
 const DiscountsPage = () => {
     const [discounts, setDiscounts] = useState<Discount[]>([]);

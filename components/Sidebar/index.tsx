@@ -8,7 +8,7 @@ import Button from "@/components/Button";
 import Dropdown from "./Dropdown";
 import { useSession } from "next-auth/react";
 
-import { navigation, adminNavigation } from "@/contstants/navigation";
+import { navigation, adminNavigation, type NavItem } from "@/contstants/navigation";
 
 type SidebarProps = {
     visibleSidebar?: boolean;
@@ -63,27 +63,58 @@ const Sidebar = ({
                         // Default for consumers/guests (no NextAuth session)
                         return ["Home", "Docs", "My Quotes"].includes(item.title);
                     })
-
                     .map((item) =>
                         item.href ? (
-                            <NavLink key={item.title} value={item} />
+                            <NavLink
+                                key={item.title}
+                                value={{
+                                    href: item.href,
+                                    title: item.title,
+                                    icon: item.icon,
+                                    counter: item.counter,
+                                }}
+                            />
                         ) : (
-                            <Dropdown key={item.title} value={item} />
+                            <Dropdown
+                                key={item.title}
+                                value={{
+                                    title: item.title,
+                                    icon: item.icon,
+                                    href: item.href,
+                                    list: item.list,
+                                }}
+                            />
                         )
                     )}
+
                 {isAdmin && (
-
-
                     <div className="mt-4 pt-4 border-t border-s-subtle">
-                        {adminNavigation.map((item: any) =>
+                        {adminNavigation.map((item: NavItem) =>
                             item.href ? (
-                                <NavLink key={item.title} value={item} />
+                                <NavLink
+                                    key={item.title}
+                                    value={{
+                                        href: item.href,
+                                        title: item.title,
+                                        icon: item.icon,
+                                        counter: item.counter,
+                                    }}
+                                />
                             ) : (
-                                <Dropdown key={item.title} value={item} />
+                                <Dropdown
+                                    key={item.title}
+                                    value={{
+                                        title: item.title,
+                                        icon: item.icon,
+                                        href: item.href,
+                                        list: item.list,
+                                    }}
+                                />
                             )
                         )}
                     </div>
                 )}
+
 
             </RemoveScroll>
             <div className="mt-auto pt-6 max-md:pt-4">

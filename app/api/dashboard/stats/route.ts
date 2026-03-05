@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 
 export async function GET() {
     try {
@@ -19,17 +20,16 @@ export async function GET() {
             return NextResponse.json({ error: "User not found" }, { status: 404 });
         }
 
-        if (!user.storeId && (user.role as any) !== "SUPER_ADMIN") {
+        const isSuperAdmin = (user.role as string) === "SUPER_ADMIN";
+
+        if (!user.storeId && !isSuperAdmin) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const where: any = {};
-        if ((user.role as any) !== "SUPER_ADMIN") {
-            where.storeId = user.storeId;
-        }
-
-        where.deletedAt = null;
+        const where: Prisma.RFQWhereInput = {
+            storeId: !isSuperAdmin ? (user.storeId as string) : undefined,
+            deletedAt: null,
+        };
 
         const [totalRfqs, pendingRfqs, acceptedRfqs, customersCount] = await Promise.all([
             prisma.rFQ.count({ where }),
@@ -47,9 +47,10 @@ export async function GET() {
         return NextResponse.json({
             totalRfqs,
             pendingRfqs,
-            balance: acceptedRfqs._sum.total || 0,
+            balance: acceptedRfqs._sum?.total || 0,
             customersCount,
         });
+
     } catch (error) {
         console.error("Dashboard stats error:", error);
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });

@@ -1,4 +1,12 @@
-export const navigation = [
+export type NavItem = {
+    title: string;
+    icon: string;
+    href?: string;
+    list?: { title: string; href: string; counter?: number }[];
+    counter?: number;
+};
+
+export const navigation: NavItem[] = [
     {
         title: "Home",
         icon: "dashboard",
@@ -63,7 +71,7 @@ export const navigation = [
 ];
 
 
-export const adminNavigation = [
+export const adminNavigation: NavItem[] = [
     {
         title: "Admin",
         icon: "lock",

@@ -28,12 +28,13 @@ const ConsumerRegisterPage = () => {
                 throw new Error(data.error || "Registration failed");
             }
             router.push("/consumer/login?registered=true");
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : "An unknown error occurred.");
         } finally {
             setIsLoading(false);
         }
     };
+
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-b-surface1 p-6">

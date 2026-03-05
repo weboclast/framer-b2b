@@ -3,9 +3,16 @@ import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { rfqSubmissionSchema } from "@/lib/zod/rfq";
 import { sendConfirmationEmail, sendNotificationEmail } from "@/lib/email";
+import { Prisma, RFQStatus, RFQ, RFQItem } from "@prisma/client";
+
+interface RFQWithItems extends RFQ {
+  items: RFQItem[];
+}
+
 
 const RATE_LIMIT_WINDOW = 60 * 1000;
 const RATE_LIMIT_MAX_REQUESTS = 10;
+
 
 const rateLimitMap = new Map<string, { count: number; timestamp: number }>();
 
@@ -44,7 +51,7 @@ export async function GET(request: NextRequest) {
     const skip = parseInt(searchParams.get("skip") || "0");
     const take = Math.min(parseInt(searchParams.get("take") || "25"), 100);
 
-    const userRole = (session.user as any).role;
+    const userRole = session.user.role;
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
       select: { storeId: true },
@@ -57,8 +64,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const where: any = {
+    const where: Prisma.RFQWhereInput = {
       deletedAt: null,
     };
 
@@ -67,11 +73,13 @@ export async function GET(request: NextRequest) {
     }
 
 
+
     const validStatuses = ["PENDING", "QUOTED", "ACCEPTED", "CLOSED"];
     if (status && status !== "all" && status !== "null" && status !== "undefined") {
       if (validStatuses.includes(status)) {
-        where.status = status;
+        where.status = status as RFQStatus;
       }
+
     }
 
     if (query) {
@@ -198,15 +206,14 @@ export async function POST(request: NextRequest) {
         addressState: shippingDetails?.state,
         addressLines: (shippingDetails?.line1 || shippingDetails?.line2
           ? { line1: shippingDetails.line1, line2: shippingDetails.line2 }
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          : {}) as any,
-        additionalCustomerData: additionalCustomerData || {},
-        rawPayload: body,
+          : {}) as Prisma.JsonObject,
+        additionalCustomerData: (additionalCustomerData || {}) as Prisma.JsonObject,
+        rawPayload: (body || {}) as Prisma.JsonObject,
         subtotal,
         tax,
         shipping,
         total,
-        consumerUserId: consumerUserId || null,
+        ...(consumerUserId ? { consumerUserId } : {}),
         items: {
           create: products.map((item) => ({
             productId: item.productId,
@@ -215,27 +222,28 @@ export async function POST(request: NextRequest) {
             unitPrice: item.unitPrice,
             quantity: item.quantity,
             lineTotal: item.unitPrice * item.quantity,
-            additionalData: item.additionalData || {},
+            additionalData: (item.additionalData || {}) as Prisma.JsonObject,
           })),
         },
-      },
+      } as Prisma.RFQUncheckedCreateInput,
       include: { items: true },
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const rfqWithItems = rfq as any;
+
 
     const confirmationResult = await sendConfirmationEmail(
-      rfqWithItems,
+      rfq as RFQWithItems,
       store.emailSettings,
       store.name
     );
 
     await sendNotificationEmail(
-      rfqWithItems,
+      rfq as RFQWithItems,
       store.emailSettings,
       store.name
     );
+
+
 
     await prisma.rFQ.update({
       where: { id: rfq.id },
