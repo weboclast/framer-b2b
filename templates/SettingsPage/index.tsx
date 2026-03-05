@@ -4,10 +4,9 @@ import { Element } from "react-scroll";
 import Layout from "@/components/Layout";
 import Menu from "./Menu";
 import ProfileInformation from "./ProfileInformation";
-import YourShop from "./YourShop";
+import StoreSettings from "./YourShop";
 import Password from "./Password";
-import Notifications from "./Notifications";
-import Payment from "./Payment";
+import EmailSettings from "./EmailSettings";
 
 const ElementWithOffset = ({
     className,
@@ -32,10 +31,10 @@ const ElementWithOffset = ({
 const SettingsPage = () => {
     const navigation = [
         {
-            title: "Your shop",
+            title: "Store",
             icon: "bag",
-            description: "Manage shop infomation",
-            to: "your-shop",
+            description: "Store name, currency, tax & Store ID",
+            to: "store-settings",
         },
         {
             title: "Security",
@@ -44,21 +43,15 @@ const SettingsPage = () => {
             to: "security",
         },
         {
-            title: "Notifications",
-            icon: "bell",
-            description: "Change the way you receive notifications",
-            to: "notifications",
-        },
-        {
-            title: "Payment",
-            icon: "wallet",
-            description: "Update payment method",
-            to: "payment",
+            title: "Email & Templates",
+            icon: "envelope",
+            description: "Sender config & email templates",
+            to: "email-settings",
         },
     ];
 
     return (
-        <Layout title="Profile settings">
+        <Layout title="Settings">
             <div className="flex items-start max-lg:block">
                 <Menu
                     profileInformationTo="profile-information"
@@ -71,17 +64,14 @@ const SettingsPage = () => {
                     >
                         <ProfileInformation />
                     </ElementWithOffset>
-                    <ElementWithOffset name="your-shop">
-                        <YourShop />
+                    <ElementWithOffset name="store-settings">
+                        <StoreSettings />
                     </ElementWithOffset>
                     <ElementWithOffset name="security">
                         <Password />
                     </ElementWithOffset>
-                    <ElementWithOffset name="notifications">
-                        <Notifications />
-                    </ElementWithOffset>
-                    <ElementWithOffset name="payment">
-                        <Payment />
+                    <ElementWithOffset name="email-settings">
+                        <EmailSettings />
                     </ElementWithOffset>
                 </div>
             </div>
@@ -90,3 +80,4 @@ const SettingsPage = () => {
 };
 
 export default SettingsPage;
+

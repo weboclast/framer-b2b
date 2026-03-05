@@ -36,6 +36,11 @@ export const navigation = [
         href: "/customers",
     },
     {
+        title: "Discounts",
+        icon: "barcode",
+        href: "/discounts",
+    },
+    {
         title: "Shipping",
         icon: "wallet",
         href: "/shipping",
@@ -46,10 +51,34 @@ export const navigation = [
         href: "/settings",
     },
     {
+        title: "My Quotes",
+        icon: "document",
+        href: "/consumer/rfqs",
+    },
+    {
         title: "Docs",
         icon: "info",
         href: "/docs",
     },
 ];
 
+
+export const adminNavigation = [
+    {
+        title: "Admin",
+        icon: "lock",
+        list: [
+            {
+                title: "Stores",
+                href: "/admin/stores",
+            },
+            {
+                title: "All RFQs",
+                href: "/admin/rfqs",
+            },
+        ],
+    },
+];
+
 export const navigationUser = [];
+

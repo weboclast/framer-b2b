@@ -3,22 +3,22 @@ import type { NextAuthConfig } from "next-auth"
 export default {
     providers: [], // Empty for now, will be merged in auth.ts
     callbacks: {
-        authorized({ auth, request: { nextUrl } }) {
-            const isLoggedIn = !!auth?.user;
-            const pathname = nextUrl.pathname;
-            const isProtectedPage = pathname.startsWith("/rfqs") || pathname.startsWith("/settings") || pathname.startsWith("/shipping") || pathname === "/";
-            const isOnLoginPage = pathname === "/login";
-
-            if (isProtectedPage) {
-                if (isLoggedIn) return true;
-                return false; // Redirect to login
-            } else if (isOnLoginPage) {
-                if (isLoggedIn) {
-                    return Response.redirect(new URL("/rfqs", nextUrl));
-                }
-                return true;
+        async jwt({ token, user }) {
+            if (user) {
+                token.id = user.id;
+                token.storeId = (user as any).storeId;
+                token.role = (user as any).role;
             }
-            return true;
+            return token;
+        },
+        async session({ session, token }) {
+            if (session.user) {
+                (session.user as any).id = token.id as string;
+                (session.user as any).storeId = token.storeId as string | null;
+                (session.user as any).role = token.role as string | null;
+            }
+            return session;
         },
     },
 } satisfies NextAuthConfig
+

@@ -1,4 +1,6 @@
-import { useState } from "react";
+"use client";
+
+import { useState, useEffect } from "react";
 import Card from "@/components/Card";
 import Icon from "@/components/Icon";
 import Percentage from "@/components/Percentage";
@@ -6,35 +8,51 @@ import NewCustomers from "@/components/NewCustomers";
 import Balance from "./Balance";
 
 const durations = [
-    { id: 1, name: "Last 7 days" },
-    { id: 2, name: "Last month" },
-    { id: 3, name: "Last year" },
+    { id: 1, name: "All time" },
 ];
 
-const tabs = [
-    {
-        id: 1,
-        icon: "profile",
-        label: "Customers",
-        value: "1,293",
-        percent: -36.8,
-    },
-    {
-        id: 2,
-        icon: "wallet",
-        label: "Balance",
-        value: "256k",
-        percent: 36.8,
-    },
-];
-
-const Overview = ({}) => {
+const Overview = ({ }) => {
     const [duration, setDuration] = useState(durations[0]);
     const [activeTab, setActiveTab] = useState(1);
+    const [stats, setStats] = useState({ customersCount: 0, balance: 0 });
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchStats = async () => {
+            try {
+                const res = await fetch("/api/dashboard/stats");
+                const data = await res.json();
+                setStats(data);
+            } catch (err) {
+                console.error(err);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchStats();
+    }, []);
+
+    const tabs = [
+        {
+            id: 1,
+            icon: "profile",
+            label: "Customers",
+            value: stats.customersCount.toLocaleString(),
+            percent: 0, // Mock for now
+        },
+        {
+            id: 2,
+            icon: "wallet",
+            label: "Balance",
+            value: `$${(stats.balance / 1000).toFixed(1)}k`,
+            percent: 0, // Mock for now
+        },
+    ];
 
     return (
         <Card
             title="Overview"
+            className={isLoading ? "opacity-50" : ""}
             selectValue={duration}
             selectOnChange={setDuration}
             selectOptions={durations}
@@ -43,27 +61,24 @@ const Overview = ({}) => {
                 <div className="flex mb-4 p-1.5 border border-s-subtle rounded-4xl bg-b-depth2">
                     {tabs.map((tab) => (
                         <div
-                            className={`group flex-1 px-12 py-8 rounded-3xl cursor-pointer transition-all max-2xl:p-6 max-xl:pr-3 max-md:p-4 ${
-                                activeTab === tab.id
-                                    ? "bg-b-surface2 shadow-depth-toggle"
-                                    : ""
-                            }`}
+                            className={`group flex-1 px-12 py-8 rounded-3xl cursor-pointer transition-all max-2xl:p-6 max-xl:pr-3 max-md:p-4 ${activeTab === tab.id
+                                ? "bg-b-surface2 shadow-depth-toggle"
+                                : ""
+                                }`}
                             key={tab.label}
                             onClick={() => setActiveTab(tab.id)}
                         >
                             <div
-                                className={`flex items-center gap-3 mb-2 text-sub-title-1 transition-colors group-hover:text-t-primary max-md:mb-3 max-md:text-sub-title-2 ${
-                                    activeTab === tab.id
-                                        ? "text-t-primary"
-                                        : "text-t-secondary"
-                                }`}
+                                className={`flex items-center gap-3 mb-2 text-sub-title-1 transition-colors group-hover:text-t-primary max-md:mb-3 max-md:text-sub-title-2 ${activeTab === tab.id
+                                    ? "text-t-primary"
+                                    : "text-t-secondary"
+                                    }`}
                             >
                                 <Icon
-                                    className={`transition-colors group-hover:fill-t-primary ${
-                                        activeTab === tab.id
-                                            ? "fill-t-primary"
-                                            : "fill-t-secondary"
-                                    }`}
+                                    className={`transition-colors group-hover:fill-t-primary ${activeTab === tab.id
+                                        ? "fill-t-primary"
+                                        : "fill-t-secondary"
+                                        }`}
                                     name={tab.icon}
                                 />
                                 <div className="">{tab.label}</div>
@@ -92,3 +107,4 @@ const Overview = ({}) => {
 };
 
 export default Overview;
+

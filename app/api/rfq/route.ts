@@ -41,13 +41,16 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
     const query = searchParams.get("query");
+    const skip = parseInt(searchParams.get("skip") || "0");
+    const take = Math.min(parseInt(searchParams.get("take") || "25"), 100);
 
+    const userRole = (session.user as any).role;
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
       select: { storeId: true },
     });
 
-    if (!user?.storeId) {
+    if (!user?.storeId && userRole !== "SUPER_ADMIN") {
       return NextResponse.json(
         { error: "User does not have a store" },
         { status: 403 }
@@ -56,9 +59,13 @@ export async function GET(request: NextRequest) {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: any = {
-      storeId: user.storeId,
       deletedAt: null,
     };
+
+    if (user?.storeId) {
+      where.storeId = user.storeId;
+    }
+
 
     const validStatuses = ["PENDING", "QUOTED", "ACCEPTED", "CLOSED"];
     if (status && status !== "all" && status !== "null" && status !== "undefined") {
@@ -76,21 +83,26 @@ export async function GET(request: NextRequest) {
       ];
     }
 
-    const rfqs = await prisma.rFQ.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      select: {
-        id: true,
-        createdAt: true,
-        customerName: true,
-        companyName: true,
-        total: true,
-        status: true,
-        customerEmail: true,
-      },
-    });
+    const [rfqs, total] = await Promise.all([
+      prisma.rFQ.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          createdAt: true,
+          customerName: true,
+          companyName: true,
+          total: true,
+          status: true,
+          customerEmail: true,
+        },
+        skip,
+        take,
+      }),
+      prisma.rFQ.count({ where }),
+    ]);
 
-    return NextResponse.json(rfqs);
+    return NextResponse.json({ rfqs, total, skip, take });
   } catch (error) {
     console.error("RFQ fetch error:", error);
     const message = error instanceof Error ? error.message : "Internal server error";
@@ -114,7 +126,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { storeId, customerName, customerEmail, companyName, phone, shippingDetails, additionalCustomerData, products } = validation.data;
+    const { storeId, customerName, customerEmail, companyName, phone, shippingDetails, additionalCustomerData, products, consumerUserId } = validation.data;
 
     if (!checkRateLimit(ip, storeId)) {
       return NextResponse.json(
@@ -194,6 +206,7 @@ export async function POST(request: NextRequest) {
         tax,
         shipping,
         total,
+        consumerUserId: consumerUserId || null,
         items: {
           create: products.map((item) => ({
             productId: item.productId,

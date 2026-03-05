@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
 import Card from "@/components/Card";
 import Table from "@/components/Table";
@@ -9,31 +9,48 @@ import Icon from "@/components/Icon";
 import Modal from "@/components/Modal";
 import Field from "@/components/Field";
 
-const mockShippingRules = [
-  { id: "rule-1", countryCode: null, isDefault: true, flatRate: 25.00 },
-  { id: "rule-2", countryCode: "US", isDefault: false, flatRate: 15.00 },
-  { id: "rule-3", countryCode: "CA", isDefault: false, flatRate: 25.00 },
-  { id: "rule-4", countryCode: "GB", isDefault: false, flatRate: 35.00 },
-  { id: "rule-5", countryCode: "DE", isDefault: false, flatRate: 35.00 },
-];
+type ShippingRule = {
+  id: string;
+  countryCode: string | null;
+  isDefault: boolean;
+  flatRate: number;
+};
+
+const defaultForm = { countryCode: "", flatRate: "0", isDefault: false };
 
 const ShippingPage = () => {
-  const [rules, setRules] = useState(mockShippingRules);
+  const [rules, setRules] = useState<ShippingRule[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
-  const [editingRule, setEditingRule] = useState<typeof mockShippingRules[0] | null>(null);
-  const [formData, setFormData] = useState({
-    countryCode: "",
-    flatRate: "0",
-    isDefault: false,
-  });
+  const [editingRule, setEditingRule] = useState<ShippingRule | null>(null);
+  const [formData, setFormData] = useState(defaultForm);
+
+  const fetchRules = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/shipping");
+      if (!res.ok) throw new Error("Failed to load shipping rules");
+      const data = await res.json();
+      setRules(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unknown error");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchRules(); }, []);
 
   const openAddModal = () => {
     setEditingRule(null);
-    setFormData({ countryCode: "", flatRate: "0", isDefault: false });
+    setFormData(defaultForm);
     setModalOpen(true);
   };
 
-  const openEditModal = (rule: typeof mockShippingRules[0]) => {
+  const openEditModal = (rule: ShippingRule) => {
     setEditingRule(rule);
     setFormData({
       countryCode: rule.countryCode || "",
@@ -43,33 +60,47 @@ const ShippingPage = () => {
     setModalOpen(true);
   };
 
-  const handleSave = () => {
-    const flatRate = parseFloat(formData.flatRate) || 0;
-    
-    if (editingRule) {
-      setRules((prev) =>
-        prev.map((r) =>
-          r.id === editingRule.id
-            ? { ...r, countryCode: formData.countryCode || null, flatRate, isDefault: formData.isDefault }
-            : r
-        )
-      );
-    } else {
-      setRules((prev) => [
-        ...prev,
-        {
-          id: `rule-${Date.now()}`,
-          countryCode: formData.countryCode || null,
-          flatRate,
-          isDefault: formData.isDefault,
-        },
-      ]);
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      const payload = {
+        countryCode: formData.countryCode.toUpperCase() || null,
+        flatRate: parseFloat(formData.flatRate) || 0,
+        isDefault: formData.isDefault,
+      };
+
+      const url = editingRule ? `/api/shipping/${editingRule.id}` : "/api/shipping";
+      const method = editingRule ? "PATCH" : "POST";
+
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to save rule");
+      }
+
+      await fetchRules();
+      setModalOpen(false);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Unknown error");
+    } finally {
+      setIsSaving(false);
     }
-    setModalOpen(false);
   };
 
-  const handleDelete = (id: string) => {
-    setRules((prev) => prev.filter((r) => r.id !== id));
+  const handleDelete = async (id: string) => {
+    if (!confirm("Delete this shipping rule?")) return;
+    try {
+      const res = await fetch(`/api/shipping/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete rule");
+      await fetchRules();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Unknown error");
+    }
   };
 
   return (
@@ -87,7 +118,13 @@ const ShippingPage = () => {
           </Button>
         </div>
 
-        <Card className="overflow-hidden">
+        {error && (
+          <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-body-2">
+            {error}
+          </div>
+        )}
+
+        <Card className={`overflow-hidden transition-opacity ${isLoading ? "opacity-50" : "opacity-100"}`}>
           <Table
             cellsThead={
               <>
@@ -136,7 +173,7 @@ const ShippingPage = () => {
           </Table>
         </Card>
 
-        {rules.length === 0 && (
+        {rules.length === 0 && !isLoading && (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <Icon name="truck" className="fill-t-tertiary w-16 h-16 mb-4" />
             <h3 className="text-h6 mb-2">No shipping rules</h3>
@@ -157,7 +194,7 @@ const ShippingPage = () => {
           </h2>
           <div className="space-y-4">
             <Field
-              label="Country Code"
+              label="Country Code (ISO 2-letter)"
               tooltip="Leave empty to make this the default rule for all countries"
               value={formData.countryCode}
               onChange={(e) =>
@@ -179,15 +216,15 @@ const ShippingPage = () => {
                 onChange={(e) => setFormData((prev) => ({ ...prev, isDefault: e.target.checked }))}
                 className="w-5 h-5 rounded border-s-subtle bg-b-surface2"
               />
-              <span className="text-body-1">Set as default rule</span>
+              <span className="text-body-1">Set as default rule (applies to all countries without a specific rule)</span>
             </label>
           </div>
           <div className="flex justify-end gap-3 mt-8">
             <Button isGray onClick={() => setModalOpen(false)}>
               Cancel
             </Button>
-            <Button isBlack onClick={handleSave}>
-              {editingRule ? "Save Changes" : "Add Rule"}
+            <Button isBlack onClick={handleSave} disabled={isSaving}>
+              {isSaving ? "Saving..." : editingRule ? "Save Changes" : "Add Rule"}
             </Button>
           </div>
         </div>

@@ -27,7 +27,9 @@ export const rfqSubmissionSchema = z.object({
   shippingDetails: addressSchema,
   additionalCustomerData: z.record(z.string(), z.any()).optional(),
   products: z.array(rfqItemSchema).min(1, "At least one product is required"),
+  consumerUserId: z.string().optional(),
 });
+
 
 export const rfqQuoteSchema = z.object({
   messageBody: z.string().min(1, "Message body is required"),

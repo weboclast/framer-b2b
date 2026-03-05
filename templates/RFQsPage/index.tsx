@@ -11,6 +11,8 @@ import Search from "@/components/Search";
 import Icon from "@/components/Icon";
 import type { RFQStatus, RFQListItem } from "@/types/rfq";
 
+const PAGE_SIZE = 25;
+
 const statusOptions = [
   { id: 0, name: "All Status", slug: "all" },
   { id: 1, name: "Pending", slug: "PENDING" },
@@ -30,6 +32,8 @@ const RFQsPage = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [rfqs, setRfqs] = useState<RFQListItem[]>([]);
+  const [total, setTotal] = useState(0);
+  const [skip, setSkip] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,13 +51,14 @@ const RFQsPage = () => {
         const params = new URLSearchParams();
         if (statusFilter.slug !== "all") params.append("status", statusFilter.slug);
         if (searchQuery) params.append("query", searchQuery);
+        params.append("skip", String(skip));
+        params.append("take", String(PAGE_SIZE));
 
         const response = await fetch(`/api/rfq?${params.toString()}`);
-        if (!response.ok) {
-          throw new Error("Failed to fetch RFQs");
-        }
+        if (!response.ok) throw new Error("Failed to fetch RFQs");
         const data = await response.json();
-        setRfqs(data);
+        setRfqs(data.rfqs || []);
+        setTotal(data.total || 0);
       } catch (err) {
         console.error("Error fetching RFQs:", err);
         setError("Could not load RFQs. Please try again.");
@@ -62,16 +67,17 @@ const RFQsPage = () => {
       }
     };
 
-    const timer = setTimeout(() => {
-      fetchRfqs();
-    }, 300); // Debounce search
-
+    const timer = setTimeout(() => { fetchRfqs(); }, 300);
     return () => clearTimeout(timer);
-  }, [statusFilter, searchQuery]);
+  }, [statusFilter, searchQuery, skip]);
 
-  const handleRowClick = (id: string) => {
-    router.push(`/rfqs/${id}`);
-  };
+  // Reset to first page when filters change
+  useEffect(() => { setSkip(0); }, [statusFilter, searchQuery]);
+
+  const handleRowClick = (id: string) => { router.push(`/rfqs/${id}`); };
+
+  const totalPages = Math.ceil(total / PAGE_SIZE);
+  const currentPage = Math.floor(skip / PAGE_SIZE) + 1;
 
   return (
     <Layout title="RFQs">
@@ -87,7 +93,7 @@ const RFQsPage = () => {
           </div>
           <Search
             className="w-72 max-md:w-full"
-            placeholder="Search by ID or email..."
+            placeholder="Search by ID, name or email..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -99,7 +105,10 @@ const RFQsPage = () => {
           </div>
         )}
 
-        <Card title="Latest RFQs" className={`overflow-hidden transition-opacity ${isLoading ? "opacity-50" : "opacity-100"}`}>
+        <Card
+          title={`RFQs${total > 0 ? ` (${total} total)` : ""}`}
+          className={`overflow-hidden transition-opacity ${isLoading ? "opacity-50" : "opacity-100"}`}
+        >
           <Table
             cellsThead={
               <>
@@ -127,13 +136,9 @@ const RFQsPage = () => {
                   </div>
                 </td>
                 <td className="text-body-2">{rfq.companyName || "—"}</td>
-                <td className="text-body-2 text-right font-medium">
-                  ${rfq.total.toFixed(2)}
-                </td>
+                <td className="text-body-2 text-right font-medium">${rfq.total.toFixed(2)}</td>
                 <td>
-                  <span
-                    className={`inline-flex items-center px-2.5 py-1 rounded-full text-caption font-medium ${statusColors[rfq.status]}`}
-                  >
+                  <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-caption font-medium ${statusColors[rfq.status]}`}>
                     {rfq.status}
                   </span>
                 </td>
@@ -156,16 +161,18 @@ const RFQsPage = () => {
 
         <div className="flex items-center justify-between">
           <div className="text-body-2 text-t-tertiary">
-            Showing {rfqs.length} RFQs
+            {total > 0 ? `Page ${currentPage} of ${totalPages} · ${total} RFQs total` : `Showing ${rfqs.length} RFQs`}
           </div>
-          <div className="flex gap-2">
-            <Button isStroke isGray>
-              Previous
-            </Button>
-            <Button isStroke isGray>
-              Next
-            </Button>
-          </div>
+          {total > PAGE_SIZE && (
+            <div className="flex gap-2">
+              <Button isStroke isGray disabled={skip === 0} onClick={() => setSkip(Math.max(0, skip - PAGE_SIZE))}>
+                Previous
+              </Button>
+              <Button isStroke isGray disabled={skip + PAGE_SIZE >= total} onClick={() => setSkip(skip + PAGE_SIZE)}>
+                Next
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </Layout>

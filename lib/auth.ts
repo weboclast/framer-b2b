@@ -51,25 +51,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     signIn: "/login",
     error: "/login",
   },
-  callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id;
-        token.storeId = (user as { storeId?: string }).storeId;
-        token.role = (user as { role?: string }).role;
-      }
-      return token;
-    },
-    async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.id as string;
-        session.user.storeId = token.storeId as string | null;
-        session.user.role = token.role as string | null;
-      }
-      return session;
-    },
-  },
   session: {
+
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60,
   },

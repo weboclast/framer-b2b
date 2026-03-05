@@ -26,11 +26,13 @@ model Store {
   currency         String         @default("USD")
   taxPercent       Float          @default(0)
   ownerId          String         @unique
+  active           Boolean        @default(true)
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
   emailSettings    EmailSettings?
   rfqs             RFQ[]
   shippingRules    ShippingRule[]
+  discounts        Discount[]
   owner            User           @relation("StoreOwner", fields: [ownerId], references: [id])
 }
 
@@ -84,12 +86,14 @@ model RFQ {
   addressLines            Json?
   additionalCustomerData  Json?
   rawPayload              Json?
+  consumerUserId          String?
   confirmationEmailStatus EmailStatus     @default(PENDING)
   deletedAt               DateTime?
   createdAt               DateTime        @default(now())
   updatedAt               DateTime        @updatedAt
   quoteNotes              QuoteNote[]
   store                   Store           @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  consumer                ConsumerUser?   @relation(fields: [consumerUserId], references: [id])
   items                   RFQItem[]
   statusHistory           StatusHistory[]
 
@@ -149,9 +153,36 @@ model PasswordResetToken {
   @@unique([email, token])
 }
 
+model ConsumerUser {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String?
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  rfqs      RFQ[]
+}
+
+model Discount {
+  id          String       @id @default(cuid())
+  storeId     String
+  code        String
+  type        DiscountType
+  value       Float
+  minSubtotal Float        @default(0)
+  active      Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  store       Store        @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, code])
+  @@index([storeId])
+}
+
 enum UserRole {
   OWNER
   ADMIN
+  SUPER_ADMIN
 }
 
 enum RFQStatus {
@@ -165,4 +196,9 @@ enum EmailStatus {
   PENDING
   SENT
   FAILED
+}
+
+enum DiscountType {
+  PERCENT
+  FIXED
 }
